@@ -1,6 +1,6 @@
 # GenCPM
 
-![framework]("fig/framework.png")
+<img src="fig/framework.png" />
 
 ## Installation
 
