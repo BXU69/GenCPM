@@ -1,5 +1,7 @@
 # GenCPM
 
+![framework]("fig/framework.png")
+
 ## Installation
 
 You can install GenCPM from github with:
@@ -49,10 +51,10 @@ multinom.GenCPM(
 - `connectome`: a array indicating the connectivity between M edges and over N subjects. The dimension should be `M*M*N`.
 - `behavior`: a vector containing the behavior measure for all subjects.
 - `x`: a data frame containing the non-image variables in the model.
-- `cv`: a character indicating the method of cross-validation. The default method is "leave-one-out" cross-validation.
+- `cv`: a character indicating the method of cross-validation. The default method is `"leave-one-out"`.
 - `k`: a parameter used to set the number of folds for k-fold cross-validation.
-- `thresh`: the value of the threshold for selecting significantly related edges. The default value is .01.
-- `edge`: a character indicating the model is fitted with either positive and negative edges respectively or combined edges together. The default is `separate`.
+- `thresh`: the value of the threshold for selecting significantly related edges. The default value is `.01`.
+- `edge`: a character indicating the model is fitted with either positive and negative edges respectively or combined edges together. The default is `"separate"`.
 - `seed`: the value used to set seed for random sampling in the process of cross-validation. The default value is `1220`.
 
 ### Output
@@ -81,11 +83,11 @@ cox.GenCPM(
 
 - `connectome`: a array indicating the connectivity between M edges and over N subjects. The dimension should be `M*M*N`.
 - `x`: a data frame containing the non-image variables in the model.
-- `time`:the follow-up time for all individuals.
+- `time`: the follow-up time for all individuals.
 - `status`: the status indicator, normally 0=alive and 1=event.
-- `cv`: a character indicating the method of cross-validation. The default method is "leave-one-out" cross-validation.
+- `cv`: a character indicating the method of cross-validation. The default method is `"leave-one-out"`.
 - `k`: a parameter used to set the number of folds for k-fold cross-validation.
-- `thresh`: the value of the threshold for selecting significantly related edges. The default value is .01.
+- `thresh`: the value of the threshold for selecting significantly related edges. The default value is `.01`.
 - `edge`: a character indicating the model is fitted with either positive and negative edges respectively or combined edges together. The default is `separate`.
 - `seed`: the value used to set seed for random sampling in the process of cross-validation. The default value is `1220`.
 
@@ -135,11 +137,11 @@ multinom.regularized.GenCPM(
 - `connectome`: a array indicating the connectivity between M edges and over N subjects. The dimension should be `M*M*N`.
 - `behavior`: a vector containing the behavior measure for all subjects.
 - `x`: a data frame containing the non-image variables in the model.
-- `cv`: a character indicating the method of cross-validation. The default method is "leave-one-out" cross-validation.
+- `cv`: a character indicating the method of cross-validation. The default method is `"leave-one-out"`.
 - `k`: a parameter used to set the number of folds for k-fold cross-validation.
-- `thresh`: the value of the threshold for selecting significantly related edges. The default value is .01.
-- `edge`: a character indicating the model is fitted with either positive and negative edges respectively or combined edges together. The default is "separate".
-- `type`: type of penalty. The default is lasso.
+- `thresh`: the value of the threshold for selecting significantly related edges. The default value is `.01`.
+- `edge`: a character indicating the model is fitted with either positive and negative edges respectively or combined edges together. The default is `"separate"`.
+- `type`: type of penalty. The default is `"lasso"`.
 - `lambda`: the value of penalty.
 - `alpha`: the alpha for elastic net penalty.
 - `seed`: the value used to set seed for random sampling in the process of cross-validation. The default value is `1220`.
@@ -154,7 +156,7 @@ multinom.regularized.GenCPM(
 - `actual_behavior`: actual values of behavior response.
 - `positive_lambda_total`: the final lambda indicating penalty used in the model fitted with positive edges separately for each fold during cross-validation. Not applicable when `edge = "combined`.
 - `negative_lambda_total`: the final lambda indicating penalty used in the model fitted with negative edges separately for each fold during cross-validation. Not applicable when `edge = "combined`.
-- `lambda_total`: the final lambda indicating penalty used in the model fitted with all edges for each fold during cross-validation. Not applicable when `edge = "separate`.
+- `lambda_total`: the final lambda indicating penalty used in the model fitted with all edges for each fold during cross-validation. Not applicable when `edge = "separate"`.
 
 
 ```
@@ -169,12 +171,13 @@ cox.regularized.GenCPM(
 
 - `connectome`: a array indicating the connectivity between M edges and over N subjects. The dimension should be `M*M*N`.
 - `x`: a data frame containing the non-image variables in the model.
-
-- `cv`: a character indicating the method of cross-validation. The default method is "leave-one-out" cross-validation.
+- `time`: the follow-up time for all individuals.
+- `status`: the status indicator, normally 0=alive and 1=event.
+- `cv`: a character indicating the method of cross-validation. The default method is `"leave-one-out"`.
 - `k`: a parameter used to set the number of folds for k-fold cross-validation.
-- `thresh`: the value of the threshold for selecting significantly related edges. The default value is .01.
-- `edge`: a character indicating the model is fitted with either positive and negative edges respectively or combined edges together. The default is "separate".
-- `type`: type of penalty. The default is lasso.
+- `thresh`: the value of the threshold for selecting significantly related edges. The default value is `.01`.
+- `edge`: a character indicating the model is fitted with either positive and negative edges respectively or combined edges together. The default is `"separate"`.
+- `type`: type of penalty. The default is `"lasso"`.
 - `lambda`: the value of penalty.
 - `alpha`: the alpha for elastic net penalty.
 - `seed`: the value used to set seed for random sampling in the process of cross-validation. The default value is `1220`.
@@ -191,7 +194,7 @@ cox.regularized.GenCPM(
 - `actual_time`: actual values of survival time.
 - `positive_lambda_total`: the final lambda indicating penalty used in the model fitted with positive edges separately for each fold during cross-validation. Not applicable when `edge = "combined`.
 - `negative_lambda_total`: the final lambda indicating penalty used in the model fitted with negative edges separately for each fold during cross-validation. Not applicable when `edge = "combined`.
-- `lambda_total`: the final lambda indicating penalty used in the model fitted with all edges for each fold during cross-validation. Not applicable when `edge = "separate`.
+- `lambda_total`: the final lambda indicating penalty used in the model fitted with all edges for each fold during cross-validation. Not applicable when `edge = "separate"`.
 
 
 ### 4. `assess.GenCPM`
@@ -207,7 +210,7 @@ assess.GenCPM(
 ### Arguments
 - `object`: returned GenCPM object from `.GenCPM` or `.regularized.GenCPM` functions. 
 - `model`: a character string representing one of the built-in regression models. `"linear"` for `linear.GenCPM` and `linear.regularized.GenCPM`; `"logistic"` for `logit.GenCPM` and `logit.regularized.GenCPM`; "multinom"" for `multinom.GenCPM` and `multinom.regularized.GenCPM`; and `"cox"` for `cox.GenCPM` and `cox.regularized.GenCPM`. The default is `"linear"`.
-- `edge`: usage of edges to fit models, and it should be decided by the edge usage in the `"object"` input. `"seperate"` for fitting two separate models using positive edges and negative edges respectively, and `"combined"` for fitting only one model use all edges selected. The default is '"separate"`. The function will report error if the `edge` is not correctly specified.
+- `edge`: usage of edges to fit models, and it should be decided by the edge usage in the `"object"` input. `"seperate"` for fitting two separate models using positive edges and negative edges respectively, and `"combined"` for fitting only one model use all edges selected. The default is `"separate"`. The function will report error if the `edge` is not correctly specified.
 
 ### Output
 
