@@ -286,7 +286,7 @@ The next step you may want to do is to assess the prediction by the `assess.GenC
 assess.GenCPM(lm.fit, model = "linear", edge = "separate")
 ```
 
-Pay attention that you should specified the `edge` correctly, which is decided by the model you fitted by `linear.GenCPM`, otherwise it will report error.
+Pay attention that you should specify the `edge` correctly, which is decided by the model you fitted with `linear.GenCPM`, otherwise it will report error. Also, remember to change the parameter `model` when switching to fit a logistic, multinomial logistic, or Cox model.
 
 Finally, we can visualize the significant edges identified by `GenCPM` in a heatmap.
 
