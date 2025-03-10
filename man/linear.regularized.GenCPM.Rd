@@ -35,9 +35,9 @@ linear.regularized.GenCPM(
 
 \item{type}{type of penalty. The default is lasso.}
 
-\item{lambda}{the value of penalty}
+\item{lambda}{the value of penalty.}
 
-\item{alpha}{the alpha for elastic net penalty}
+\item{alpha}{the alpha for elastic net penalty.}
 
 \item{seed}{the value used to set seed for random sampling in the process of cross-validation. The default value is 1220.}
 }
