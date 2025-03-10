@@ -1,5 +1,7 @@
 # GenCPM
 
+## Framework
+
 <img src="fig/framework.png" />
 
 ## Installation
@@ -240,6 +242,66 @@ The output of `heatmap.GenCPM` is a heatmap demonstrating the strength of the co
 
 ## Example
 
+We generate simulation data as the input data to illustrate how to use some functions of this package. The following example is the tutorial of the `linear.GenCPM`. The usage of other model fitting functions is the same case.
+
+First, we generate `connectome`, which is a `268*268*500` array, and the behavior response `y` as follows. 268 is the preference dimension as the heatmap plotting selected edges uses 10-node label from Shen268 atlas. 
+
+```r
+set.seed(123)
+N <- 500 # 500 individuals
+M <- 268 # 268 edges
+connectome <- array(0, dim = c(M, M, N)) # initialize the 3D array to store the connectivity matrix
+edge <- matrix(NA, nrow = N, ncol = (M+1)*M/2) # to store the upper-triangle part of the matrix
+  
+index <- c(1:((M+1)*M/2)) 
+pos_ind <- sample(index, ((M+1)*M/2)/3, replace = F) # randomly sample 1/3 edges to be positively correlated with the response
+neg_ind <- sample(index[-pos_ind], ((M+1)*M/2)/3, replace = F) # randomly sample 1/3 edges to be negative correlated with the response
+
+for (i in 1:N) {
+  
+  mat <- matrix(runif(M*M, min = -1, max = 1), nrow = M) # generate random connectivity matrix
+  sym_mat <- (mat + t(mat)) / 2   # make the matrix symmetric
+  diag(sym_mat) <- 1   # set the diagonal to 1
+  connectome[, , i] <- sym_mat
+  edge[i,] <- sym_mat[upper.tri(sym_mat, diag=T)]
+  
+}
+
+corr <- rep(0, (M+1)*M/2) # set correlation to be 0 for those edges not be selected
+corr[pos_ind] <- 0.8 # set correlation to be 0.8 for those edges selected to be positive
+corr[neg_ind] <- -0.8 # set correlation to be 0.8 for those edges selected to be negative
+epsilon <- rnorm(N) # generate error term
+y <- edge %*% corr + epsilon # generate response `y`
+```
+
+Then, the simulation data are put into the `linear.GenCPM` to fit a linear regression model and make the prediction. We don't include non-image covariate `x` in this example and keep other settings as default.
+
+```r
+lm.fit <- linear.GenCPM(connectome, y)
+```
+
+The next step you may want to do is to assess the prediction by the `assess.GenCPM`.
+
+```r
+assess.GenCPM(lm.fit, model = "linear", edge = "separate")
+```
+
+Pay attention that you should specified the `edge` correctly, which is decided by the model you fitted by `linear.GenCPM`, otherwise it will report error.
+
+Finally, we can visualize the significant edges identified by `GenCPM` in a heatmap.
+
+```r
+heatmap.GenCPM(lm.fit, foldThreshold = 0.8)
+```
+
+`foldThreshold = 0.8` means that the edges selected for over 80% folds will be plotted. You can tune this parameter according to your need.
+
+<img src="fig/hmexample.png" />
+
+
+## Citation
+
+Please cite the paper when you use the `GenCPM` package.
 
 
 
