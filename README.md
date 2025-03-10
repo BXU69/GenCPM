@@ -50,7 +50,7 @@ multinom.GenCPM(
 
 ### Arguments
 
-- `connectome`: a array indicating the connectivity between M edges and over N subjects. The dimension should be `M*M*N`.
+- `connectome`: an array indicating the connectivity between M edges and over N subjects. The dimension should be `M*M*N`.
 - `behavior`: a vector containing the behavior measure for all subjects.
 - `x`: a data frame containing the non-image variables in the model.
 - `cv`: a character indicating the method of cross-validation. The default method is `"leave-one-out"`.
@@ -83,7 +83,7 @@ cox.GenCPM(
 
 ### Arguments
 
-- `connectome`: a array indicating the connectivity between M edges and over N subjects. The dimension should be `M*M*N`.
+- `connectome`: an array indicating the connectivity between M edges and over N subjects. The dimension should be `M*M*N`.
 - `x`: a data frame containing the non-image variables in the model.
 - `time`: the follow-up time for all individuals.
 - `status`: the status indicator, normally 0=alive and 1=event.
@@ -136,7 +136,7 @@ multinom.regularized.GenCPM(
 ```
 
 ### Arguments
-- `connectome`: a array indicating the connectivity between M edges and over N subjects. The dimension should be `M*M*N`.
+- `connectome`: an array indicating the connectivity between M edges and over N subjects. The dimension should be `M*M*N`.
 - `behavior`: a vector containing the behavior measure for all subjects.
 - `x`: a data frame containing the non-image variables in the model.
 - `cv`: a character indicating the method of cross-validation. The default method is `"leave-one-out"`.
@@ -171,7 +171,7 @@ cox.regularized.GenCPM(
 
 ### Arguments
 
-- `connectome`: a array indicating the connectivity between M edges and over N subjects. The dimension should be `M*M*N`.
+- `connectome`: an array indicating the connectivity between M edges and over N subjects. The dimension should be `M*M*N`.
 - `x`: a data frame containing the non-image variables in the model.
 - `time`: the follow-up time for all individuals.
 - `status`: the status indicator, normally 0=alive and 1=event.

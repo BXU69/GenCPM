@@ -20,7 +20,7 @@ cox.regularized.GenCPM(
 )
 }
 \arguments{
-\item{connectome}{a array indicating the connectivity between M1 edges and over N subjects. The dimension should be \code{M1*M1*N}.}
+\item{connectome}{an array indicating the connectivity between M1 edges and over N subjects. The dimension should be \code{M1*M1*N}.}
 
 \item{x}{non-image covariates matrix, of \code{n (obs)* p (vars)}.}
 

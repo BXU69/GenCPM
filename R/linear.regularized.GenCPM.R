@@ -2,7 +2,7 @@
 #'
 #' @import psych
 #' @import glmnet
-#' @param connectome a array indicating the connectivity between M edges and over N subjects. The dimension should be `M*M*N`.
+#' @param connectome an array indicating the connectivity between M edges and over N subjects. The dimension should be `M*M*N`.
 #' @param behavior a vector containing the behavior measure for all subjects.
 #' @param x a data frame containing the non-image variables in the model.
 #' @param cv a character indicating the method of cross-validation. The default method is "leave-one-out" cross-validation.

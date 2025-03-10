@@ -14,7 +14,7 @@ train.GenCPM(
 )
 }
 \arguments{
-\item{train_array}{a array indicating the connectivity between M edges and over N subjects. The dimension should be \code{M*M*N}.}
+\item{train_array}{an array indicating the connectivity between M edges and over N subjects. The dimension should be \code{M*M*N}.}
 
 \item{train_behav}{a vector containing the behavior measure for all subjects.}
 

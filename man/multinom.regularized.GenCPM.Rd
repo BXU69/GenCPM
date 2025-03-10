@@ -19,7 +19,7 @@ multinom.regularized.GenCPM(
 )
 }
 \arguments{
-\item{connectome}{a array indicating the connectivity between M edges and over N subjects. The dimension should be \code{M*M*N}.}
+\item{connectome}{an array indicating the connectivity between M edges and over N subjects. The dimension should be \code{M*M*N}.}
 
 \item{behavior}{a vector containing the behavior measure for all subjects.}
 
