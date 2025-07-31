@@ -2,16 +2,19 @@
 #'
 #' @import psych
 #' @import nnet
+#' @import MASS
 #' @param train_array an array indicating the connectivity between M edges and over N subjects. The dimension should be `M*M*N`.
 #' @param train_behav a vector containing the behavior measure for all subjects.
 #' @param train_x a data frame containing the non-image variables in the model.
 #' @param fit the method to be used in fitting the model. The default method is "linear".
+#' @param correlation the method for finding the correlation between edge and behavior. The default is "pearson". Alternative approaches are "spearman" and "kendall".
 #' @param thresh the value of the threshold for selecting significantly related edges. The default value is .01.
 #' @param edge a character indicating the model is fitted with either positive and negative edges respectively or combined edges together. The default is "separate".
 #' @return A list contains positive edges, negative edges, the model based on positive edges and negative edges separately, or the model based on combined edges.
 #' @export
 
-train.GenCPM <- function(train_array, train_behav=NULL, train_x = NULL, fit = "linear", thresh=.01, edge = "separate"){
+train.GenCPM <- function(train_array, train_behav=NULL, train_x = NULL,
+                         fit = "linear", correlation = "pearson", thresh=.01, edge = "separate"){
 
   M <- dim(train_array)[1]
   N <- dim(train_array)[3]
@@ -25,7 +28,8 @@ train.GenCPM <- function(train_array, train_behav=NULL, train_x = NULL, fit = "l
   r_mat <- rep(0, M*M)
   p_mat <- rep(0, M*M)
 
-  corr <- corr.test(x = t(train_mats), y = train_behav, adjust = "none", ci=F)
+  corr <- corr.test(x = t(train_mats), y = as.numeric(train_behav), method = correlation,
+                    adjust = "none", ci=F)
 
   r_mat <- as.vector(corr$r)
   p_mat <- as.vector(corr$p)

@@ -1,10 +1,12 @@
 #' Fit a Cox Model for Survival Outcome using Connectome-based Predictive Modeling
 #'
 #' @import survival
-#' @param connectome an array indicating the connectivity between M1 edges and over N subjects. The dimension must be `M1*M1*N`.
-#' @param x non-image covariates matrix of `n (obs)* p (vars)`.
-#' @param time the follow-up time for all individuals.
-#' @param status the status indicator, normally 0=alive and 1=event.
+#' @param connectome an array indicating the connectivity between M1 edges and over N subjects for model fitting. The dimension must be `M1*M1*N`.
+#' @param x non-image covariates matrix of `n (obs)* p (vars)` for model fitting.
+#' @param time the follow-up time for all individuals for model fitting.
+#' @param status the status indicator for model fitting, normally 0=alive and 1=event.
+#' @param external.connectome an external array indicating the connectivity for prediction.
+#' @param external.x an external data frame containing the non-image variables for prediction.
 #' @param cv a character indicating the method of cross-validation. The default method is "leave-one-out" cross-validation.
 #' @param k a parameter used to set the number of folds for k-fold cross-validation.
 #' @param thresh the value of the threshold for selecting significantly related edges. The default value is .01.
@@ -15,6 +17,7 @@
 
 
 cox.GenCPM <- function(connectome, x=NULL, time, status,
+                       external.connectome = NULL, external.x = NULL,
                     cv="leave-one-out", k = dim(connectome)[3],
                     thresh = .01, edge="separate", seed = 1220){
 
@@ -33,6 +36,10 @@ cox.GenCPM <- function(connectome, x=NULL, time, status,
     all_edges[i,] <- as.vector(connectome[,,i][upper.tri(connectome[,,i])])
   }
 
+  if(missing(external.connectome)){
+    stop("Connectome are required for prediction.")
+  }else if(missing(external.connectome) & missing(external.x)){
+  
   if((cv == "leave-one-out" && k == dim(connectome)[3]) | (cv == "k-fold" && k == dim(connectome)[3])){
 
     coef <- rep(NA,M)
@@ -385,5 +392,130 @@ cox.GenCPM <- function(connectome, x=NULL, time, status,
 
 }
 
+  }else{
+    
+    coef <- rep(NA,M)
+    pval <- rep(NA,M)
+      
+      # divide into TRAIN set and TEST set
+      
+      train_mats <- all_edges
+      train_time <- time
+      train_status <- status
+      
+      t <- dim(external.connectome)[3]
+      
+      external_edges <- matrix(NA,nrow=t,ncol=M)
+      
+      for (i in 1:t){
+        external_edges[i,] <- as.vector(connectome[,,i][upper.tri(connectome[,,i])])
+      }
+      
+      test_mats <- external_edges
+      
+
+      for(j in 1:M){
+        ms_edge <- data.frame(time=train_time, status=train_status, edge=train_mats[,j])
+        fit_cox <- coxph(Surv(time,status) ~ ., data=ms_edge)
+        coef[j] <- summary(fit_cox)$coefficients[1]
+        pval[j] <- summary(fit_cox)$coefficients[5]
+      }
+      
+      edge_index_pos <- which(coef > 0 & pval<=thresh)
+      edge_index_neg <- which(coef < 0 & pval<=thresh)
+      
+      if(edge=="separate"){
+        
+        train_mats_pos <- rowSums(train_mats[,which(coef > 0 & pval<=thresh)])
+        train_mats_neg <- rowSums(train_mats[,which(coef < 0 & pval<=thresh)])
+        
+        test_mats_pos <- rowSums(test_mats[,which(coef > 0 & pval<=thresh)])
+        test_mats_neg <- rowSums(test_mats[,which(coef < 0 & pval<=thresh)])
+        
+        if(missing(x)){
+          train_x <- NULL
+          train_df_pos <- data.frame(time=train_time, status=train_status, edge=train_mats_pos)
+          train_df_neg <- data.frame(time=train_time, status=train_status, edge=train_mats_neg)
+          
+        }else {
+          train_x <- x
+          train_df_pos <- data.frame(time=train_time, status=train_status, edge=train_mats_pos, x=train_x)
+          train_df_neg <- data.frame(time=train_time, status=train_status, edge=train_mats_neg, x=train_x)
+          
+        }
+        
+        if(missing(x)){
+          test_x <- NULL
+          test_df_pos <- data.frame(edge=test_mats_pos)
+          test_df_neg <- data.frame(edge=test_mats_neg)
+          
+        }else {
+          test_x <- external.x
+          test_df_pos <- data.frame(edge=test_mats_pos, x=test_x)
+          test_df_neg <- data.frame(edge=test_mats_neg, x=test_x)
+          
+        }
+        
+        fit_pos <- coxph(Surv(time,status) ~ .,data=train_df_pos)
+        fit_neg <- coxph(Surv(time,status) ~ .,data=train_df_neg)
+        
+        # predict TEST sub survival
+        
+        lp_pred_pos <- predict(fit_pos, newdata=test_df_pos)
+        lp_pred_neg <- predict(fit_neg, newdata=test_df_neg)
+
+      }else if(edge=="combined"){
+        
+        train_mats <- rowSums(train_mats[,which(pval<=thresh)])
+        
+        test_mats <- rowSums(test_mats[,which(pval<=thresh)])
+        
+        if(missing(x)){
+          train_x <- NULL
+          train_df <- data.frame(time=train_time, status=train_status, edge=train_mats)
+        }else {
+          train_x <- x
+          train_df <- data.frame(time=train_time, status=train_status, edge=train_mats, x=train_x)
+        }
+        
+        if(missing(x)){
+          test_x <- NULL
+          test_df <- data.frame(edge=test_mats)
+        }else {
+          test_x <- external.x
+          test_df <- data.frame(edge=test_mats, x=test_x)
+        }
+        
+        fit <- coxph(Surv(time,status) ~ ., data=train_df)
+        
+        # predict TEST sub survival
+        
+        lp_pred <- predict(fit, newdata=test_df)
+  
+      }
+      
+      
+    
+    if(edge=="separate"){
+      
+      return(list(positive_edges=edge_index_pos,
+                  negative_edges=edge_index_neg,
+                  positive_model=fit_pos,
+                  negative_model=fit_neg,
+                  positive_predicted_linear_predictor=lp_pred_pos,
+                  negative_predicted_linear_predictor=lp_pred_neg))
+      
+    }else if(edge=="combined"){
+      
+      return(list(positive_edges=edge_index_pos,
+                  negative_edges=edge_index_neg,
+                  combined_model=fit,
+                  predicted_linear_predictor=lp_pred))
+    }
+    
+    
+  }
+  
+  
 }
 

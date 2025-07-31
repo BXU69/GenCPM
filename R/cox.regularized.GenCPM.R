@@ -2,10 +2,12 @@
 #'
 #' @import survival
 #' @import glmnet
-#' @param connectome an array indicating the connectivity between M1 edges and over N subjects. The dimension should be `M1*M1*N`.
-#' @param x non-image covariates matrix, of `n (obs)* p (vars)`.
-#' @param time the follow-up time for all individuals.
-#' @param status the status indicator, normally 0=alive and 1=event.
+#' @param connectome an array indicating the connectivity between M1 edges and over N subjects for model fitting. The dimension should be `M1*M1*N`.
+#' @param x non-image covariates matrix, of `n (obs)* p (vars)` for model fitting.
+#' @param time the follow-up time for all individuals for model fitting.
+#' @param status the status indicator for model fitting, normally 0=alive and 1=event.
+#' @param external.connectome an external array indicating the connectivity for prediction.
+#' @param external.x an external data frame containing the non-image variables for prediction.
 #' @param cv a character indicating the method of cross-validation. The default method is "leave-one-out" cross-validation.
 #' @param k a parameter used to set the number of folds for k-fold cross-validation.
 #' @param thresh the value of the threshold for selecting significantly related edges. The default value is .01.
@@ -19,6 +21,7 @@
 
 
 cox.regularized.GenCPM <- function(connectome, x=NULL, time, status,
+                    external.connectome = NULL, external.x = NULL,
                     cv="leave-one-out", k = dim(connectome)[3],
                     thresh = .01, edge="separate", type="lasso",
                     lambda=NULL, alpha=NULL, seed = 1220){
@@ -53,6 +56,10 @@ cox.regularized.GenCPM <- function(connectome, x=NULL, time, status,
   for (i in 1:N){
     all_edges[,i] <- t(connectome[,,i])[lower.tri(connectome[,,i],diag=FALSE)]
   }
+  
+  if(missing(external.connectome)){
+    stop("Connectome are required for prediction.")
+  }else if(missing(external.connectome) & missing(external.x)){
 
   if((cv == "leave-one-out" && k == dim(connectome)[3]) | (cv == "k-fold" && k == dim(connectome)[3])){
 
@@ -531,5 +538,200 @@ cox.regularized.GenCPM <- function(connectome, x=NULL, time, status,
 
   }
 
+  }else{
+        
+        coef <- rep(NA,M)
+        pval <- rep(NA,M)
+        
+          # divide into TRAIN set and TEST set
+          
+          train_mats <- all_edges
+          train_time <- time
+          train_status <- status
+          
+          if(missing(x)){
+            train_x <- NULL
+          }else {
+            train_x <- x
+          }
+          
+          t <- dim(external.connectome)[3]
+          
+          external_edges <- matrix(NA,nrow=M,ncol=t)
+          
+          for (i in 1:t){
+            external_edges[,i] <- t(connectome[,,i])[lower.tri(connectome[,,i],diag=FALSE)]
+          }
+          
+          test_mats <- external_edges
+          
+          if(missing(x)){
+            test_x <- NULL
+          }else {
+            test_x <- external.x
+          }
+          
+          # marginal screening
+          
+          for(j in 1:M){
+            ms_edge <- data.frame(time=train_time, status=train_status, edge=train_mats[j,])
+            fit_cox <- coxph(Surv(time,status) ~ ., data=ms_edge)
+            coef[j] <- summary(fit_cox)$coefficients[1]
+            pval[j] <- summary(fit_cox)$coefficients[5]
+          }
+          
+          edge_index <- which(pval<=thresh)
+          pos_edge_index <- which(coef > 0 & pval<=thresh)
+          neg_edge_index <- which(coef < 0 & pval<=thresh)
+          
+          nedge <- length(edge_index)
+          nedge_pos <- length(pos_edge_index)
+          nedge_neg <- length(neg_edge_index)
+          
+          if(edge=="separate"){
+            
+            train_mats_pos <- train_mats[which(coef > 0 & pval<=thresh),]
+            train_mats_neg <- train_mats[which(coef < 0 & pval<=thresh),]
+            
+            test_mats_pos <- test_mats[which(coef > 0 & pval<=thresh),]
+            test_mats_neg <- test_mats[which(coef < 0 & pval<=thresh),]
+            
+            train_covars_pos <- data.matrix(cbind(edge=t(train_mats_pos), x=train_x))
+            train_covars_neg <- data.matrix(cbind(edge=t(train_mats_neg), x=train_x))
+            
+            test_covars_pos <- data.matrix(cbind(edge=t(test_mats_pos), x=test_x))
+            test_covars_neg <- data.matrix(cbind(edge=t(test_mats_neg), x=test_x))
+            
+            if(missing(lambda) | length(lambda) < 1){
+              
+              fit_lambda_pos <- cv.glmnet(train_covars_pos, Surv(train_time, train_status),
+                                          family="cox", alpha=type_alpha,
+                                          penalty.factor=c(rep(1, nedge_pos),rep(0, ncol(train_covars_pos)-nedge_pos)))
+              opt_lambda_pos <- fit_lambda_pos$lambda.1se
+              
+              fit_lambda_neg <- cv.glmnet(train_covars_neg, Surv(train_time, train_status),
+                                          family="cox", alpha=type_alpha,
+                                          penalty.factor=c(rep(1, nedge_neg),rep(0, ncol(train_covars_neg)-nedge_neg)))
+              opt_lambda_neg <- fit_lambda_neg$lambda.1se
+              
+            }else if(length(lambda)>1){
+              
+              fit_lambda_pos <- cv.glmnet(train_covars_pos, Surv(train_time, train_status),
+                                          family="cox", lambda = lambda,
+                                          alpha=type_alpha,
+                                          penalty.factor=c(rep(1, nedge_pos),rep(0, ncol(train_covars_pos)-nedge_pos)))
+              opt_lambda_pos <- fit_lambda_pos$lambda.1se
+              
+              fit_lambda_neg <- cv.glmnet(train_covars_neg, Surv(train_time, train_status),
+                                          family="cox", lambda = lambda,
+                                          alpha=type_alpha,
+                                          penalty.factor=c(rep(1, nedge_neg),rep(0, ncol(train_covars_neg)-nedge_neg)))
+              opt_lambda_neg <- fit_lambda_neg$lambda.1se
+              
+            }else{
+              
+              opt_lambda_pos <- lambda
+              opt_lambda_neg <- lambda
+              
+            }
+            
+            lambda_total_pos <- opt_lambda_pos
+            lambda_total_neg <- opt_lambda_neg
+            
+            fit_pos <- glmnet(train_covars_pos, Surv(train_time, train_status),
+                              family="cox", lambda = opt_lambda_pos, alpha=type_alpha,
+                              penalty.factor=c(rep(1, nedge_pos),rep(0, ncol(train_covars_pos)-nedge_pos)))
+            
+            fit_neg <- glmnet(train_covars_neg, Surv(train_time, train_status),
+                              family="cox", lambda = opt_lambda_neg,
+                              alpha=type_alpha,
+                              penalty.factor=c(rep(1, nedge_neg),rep(0, ncol(train_covars_neg)-nedge_neg)))
+            
+            # edge selection by glmnet
+            
+            coef_edge_pos <- data.matrix(coef(fit_pos))[c(1:nedge_pos),]
+            coef_edge_neg <- data.matrix(coef(fit_neg))[c(1:nedge_neg),]
+            
+            selected_edges_pos <- pos_edge_index[which(coef_edge_pos > 0)]
+            selected_edges_neg <- neg_edge_index[which(coef_edge_neg < 0)]
+            
+            # predict TEST sub survival
+            
+            lp_pred_pos <- predict(fit_pos, newx=test_covars_pos, s=opt_lambda_pos)
+            lp_pred_neg <- predict(fit_neg, newx=test_covars_neg, s=opt_lambda_pos)
+            
+            
+          }else if(edge=="combined"){
+            
+            train_mats <- train_mats[which(pval<=thresh),]
+            test_mats <- test_mats[which(pval<=thresh),]
+            
+            train_covars <- data.matrix(cbind(edge=t(train_mats), x=train_x))
+            test_covars <- data.matrix(cbind(edge=t(test_mats), x=test_x))
+            
+            if(missing(lambda) | length(lambda) < 1){
+              
+              fit_lambda <- cv.glmnet(train_covars, Surv(train_time, train_status),
+                                      family="cox", alpha=type_alpha,
+                                      penalty.factor=c(rep(1, nedge),rep(0, ncol(train_covars)-nedge)))
+              opt_lambda <- fit_lambda$lambda.1se
+              
+            }else if(length(lambda)>1){
+              
+              fit_lambda <- cv.glmnet(train_covars, Surv(train_time, train_status),
+                                      family="cox", lambda = lambda,
+                                      alpha=type_alpha,
+                                      penalty.factor=c(rep(1, nedge),rep(0, ncol(train_covars)-nedge)))
+              opt_lambda <- fit_lambda$lambda.1se
+              
+            }else{
+              
+              opt_lambda <- lambda
+              
+            }
+            
+            lambda_total <- opt_lambda
+            
+            fit <- glmnet(train_covars, Surv(train_time, train_status),
+                          family="cox", lambda = opt_lambda, alpha=type_alpha,
+                          penalty.factor=c(rep(1, nedge),rep(0, ncol(train_covars)-nedge)))
+            
+            # edge selection by glmnet
+            
+            coef_edge <- data.matrix(coef(fit))[c(1:nedge),]
+            
+            selected_edges_pos <- edge_index[which(coef_edge > 0)]
+            selected_edges_neg <- edge_index[which(coef_edge < 0)]
+            
+            # predict TEST sub survival
+            
+            lp_pred <- predict(fit, newx=test_covars, s=opt_lambda)
+            
+          }
+
+        if(edge=="separate"){
+          
+          return(list(positive_edges=selected_edges_pos,
+                      negative_edges=selected_edges_neg,
+                      positive_model=fit_pos,
+                      negative_model=fit_neg,
+                      positive_predicted_linear_predictor=lp_pred_pos,
+                      negative_predicted_linear_predictor=lp_pred_neg,
+                      positive_lambda=lambda_total_pos,
+                      negative_lambda=lambda_total_neg))
+          
+        }else if(edge=="combined"){
+          
+          return(list(positive_edges=selected_edges_pos,
+                      negative_edges=selected_edges_neg,
+                      combined_model=fit,
+                      predicted_linear_predictor=lp_pred,
+                      lambda=lambda_total))
+        }
+        
+    
+    
+  }
+  
 }
 

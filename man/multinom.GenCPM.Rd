@@ -2,29 +2,38 @@
 % Please edit documentation in R/multinom.GenCPM.R
 \name{multinom.GenCPM}
 \alias{multinom.GenCPM}
-\title{Fit a Multinomial Logistic Model for Categorical Response using Connectome-based Predictive Modeling}
+\title{Fit a Multinomial Logistic Model for Nominal Response using Connectome-based Predictive Modeling}
 \usage{
 multinom.GenCPM(
   connectome,
   behavior,
   x = NULL,
+  external.connectome = NULL,
+  external.x = NULL,
   cv = "leave-one-out",
   k = dim(connectome)[3],
+  correlation = "pearson",
   thresh = 0.01,
   edge = "separate",
   seed = 1220
 )
 }
 \arguments{
-\item{connectome}{an array indicating the connectivity between M edges and over N subjects. The dimension should be \code{M*M*N}.}
+\item{connectome}{an array indicating the connectivity between M edges and over N subjects for model fitting. The dimension should be \code{M*M*N}.}
 
-\item{behavior}{a vector containing the behavior measure for all subjects.}
+\item{behavior}{a vector containing the behavior measure for all subjects for model fitting.}
 
-\item{x}{a data frame containing the non-image variables in the model.}
+\item{x}{a data frame containing the non-image variables for model fitting.}
+
+\item{external.connectome}{an external array indicating the connectivity for prediction.}
+
+\item{external.x}{an external data frame containing the non-image variables for prediction.}
 
 \item{cv}{a character indicating the method of cross-validation. The default method is "leave-one-out" cross-validation.}
 
 \item{k}{a parameter used to set the number of folds for k-fold cross-validation.}
+
+\item{correlation}{the method for finding the correlation between edge and behavior. The default is "pearson". Alternative approaches are "spearman" and "kendall".}
 
 \item{thresh}{the value of the threshold for selecting significantly related edges. The default value is .01.}
 
@@ -36,5 +45,5 @@ multinom.GenCPM(
 A list contains positive edges, negative edges, Pearson correlation coefficient, p-value, predicted behavior, and actual behavior.
 }
 \description{
-Fit a Multinomial Logistic Model for Categorical Response using Connectome-based Predictive Modeling
+Fit a Multinomial Logistic Model for Nominal Response using Connectome-based Predictive Modeling
 }

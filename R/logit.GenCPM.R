@@ -1,11 +1,14 @@
 #' Fit a Logistic Model for Binary Response using Connectome-based Predictive Modeling
 #'
 #' @import psych
-#' @param connectome an array indicating the connectivity between M edges and over N subjects. The dimension should be `M*M*N`.
-#' @param behavior a vector containing the behavior measure for all subjects.
-#' @param x a data frame containing the non-image variables in the model.
+#' @param connectome an array indicating the connectivity between M edges and over N subjects for model fitting. The dimension should be `M*M*N`.
+#' @param behavior a vector containing the behavior measure for all subjects for model fitting.
+#' @param x a data frame containing the non-image variables for model fitting.
+#' @param external.connectome an external array indicating the connectivity for prediction.
+#' @param external.x an external data frame containing the non-image variables for prediction.
 #' @param cv a character indicating the method of cross-validation. The default method is "leave-one-out" cross-validation.
 #' @param k a parameter used to set the number of folds for k-fold cross-validation.
+#' @param correlation the method for finding the correlation between edge and behavior. The default is "pearson". Alternative approaches are "spearman" and "kendall".
 #' @param thresh the value of the threshold for selecting significantly related edges. The default value is .01.
 #' @param edge a character indicating the model is fitted with either positive and negative edges respectively or combined edges together. The default is "separate".
 #' @param seed the value used to set seed for random sampling in the process of cross-validation. The default value is 1220.
@@ -13,8 +16,10 @@
 #' @export
 
 logit.GenCPM <- function(connectome, behavior, x=NULL,
+                         external.connectome = NULL, external.x = NULL,
                        cv="leave-one-out", k = dim(connectome)[3],
-                       thresh = .01, edge = "separate", seed = 1220){
+                       correlation = "pearson", thresh = .01, edge = "separate",
+                       seed = 1220){
 
   M <- dim(connectome)[1]
   N <- dim(connectome)[3]
@@ -22,8 +27,12 @@ logit.GenCPM <- function(connectome, behavior, x=NULL,
   if(cv != "leave-one-out" && cv != "k-fold"){
     stop("The input of cv can only be leave-one-out or k-fold.")
   }
-
-  if((cv == "leave-one-out" && k == dim(connectome)[3]) | (cv == "k-fold" && k == dim(connectome)[3])){
+  
+  if(missing(external.connectome)){
+    stop("Connectome are required for prediction.")
+  }else if(missing(external.connectome) & missing(external.x)){
+    
+    if((cv == "leave-one-out" && k == dim(connectome)[3]) | (cv == "k-fold" && k == dim(connectome)[3])){
 
     behav_pred_pos <- rep(0, N)
     behav_pred_neg <- rep(0, N)
@@ -52,7 +61,8 @@ logit.GenCPM <- function(connectome, behavior, x=NULL,
 
       # train GenCPM model
 
-      cpm <- train.GenCPM(train_array,train_behav,train_x,fit="logistic",thresh=thresh,edge=edge)
+      cpm <- train.GenCPM(train_array, train_behav, train_x, fit = "logistic",
+                          correlation = correlation, thresh = thresh, edge = edge)
       r_mat[[leftout]] <- cpm$r_mat
       p_mat[[leftout]] <- cpm$p_mat
       pos_edges <- cpm$positive_edges_matrix
@@ -216,7 +226,8 @@ logit.GenCPM <- function(connectome, behavior, x=NULL,
 
         # train GenCPM model
 
-        cpm <- train.GenCPM(train_array,train_behav,train_x,fit="logistic",thresh=thresh,edge=edge)
+        cpm <- train.GenCPM(train_array, train_behav, train_x, fit="logistic",
+                            correlation = correlation, thresh = thresh, edge = edge)
         r_mat[[fold]] <- cpm$r_mat
         p_mat[[fold]] <- cpm$p_mat
         pos_edges <- cpm$positive_edges_matrix
@@ -314,6 +325,109 @@ logit.GenCPM <- function(connectome, behavior, x=NULL,
     }
 
   }
+  }else{
+    
+    t <- dim(external.connectome)[3]
+    
+    train_array <- connectome
+    train_behav <- behavior
+    
+    if(missing(x)){
+      train_x <- NULL
+    }else{
+      train_x <- x
+    }
+    
+    test_array <- external.connectome
+    
+    cpm <- train.GenCPM(train_array, train_behav, train_x, fit="logistic",
+                        correlation = correlation, thresh = thresh, edge = edge)
+    r_mat <- cpm$r_mat
+    p_mat <- cpm$p_mat
+    pos_edges <- cpm$positive_edges_matrix
+    neg_edges <- cpm$negative_edges_matrix
+    positive_edges <- cpm$positive_edges
+    negative_edges <- cpm$negative_edges
+    
+    if(edge=="separate"){
+      
+      fit_pos <- cpm$positive_model
+      fit_neg <- cpm$negative_model
+      
+    }else if(edge == "combined"){
+      
+      fit_combined <- cpm$combined_model
+      
+    }else{
+      stop("edge must be separate or combined")
+    }
+    
+    # calculate the sum of TEST subs
+    
+    test_sumpos <- rep(0,t)
+    test_sumneg <- rep(0,t)
+    
+    for (j in 1:t){
+      test_sumpos[j] <- sum(test_array[,,j]*pos_edges, na.rm = TRUE)/2
+      test_sumneg[j] <- sum(test_array[,,j]*neg_edges, na.rm = TRUE)/2
+    }
+    
+    if(missing(external.x)){
+      test_x <- NULL
+      test_pos <- data.frame(sumpos=test_sumpos)
+      test_neg <- data.frame(sumneg=test_sumneg)
+      test_combined <- data.frame(sumpos=test_sumpos, sumneg=test_sumneg)
+    }else {
+      test_x <- external.x
+      test_pos <- data.frame(sumpos=test_sumpos, x=test_x)
+      test_neg <- data.frame(sumneg=test_sumneg, x=test_x)
+      test_combined <- data.frame(sumpos=test_sumpos, sumneg=test_sumneg, x=test_x)
+    }
+    
+    if(edge == "separate"){
+      
+      if((NA %in% fit_pos) == FALSE){
+        behav_pred_pos <- as.vector(predict(fit_pos, newdata=test_pos, type="response"))
+      }
+      else{
+        behav_pred_pos <- NA
+      }
+      
+      if((NA %in% fit_neg) == FALSE){
+        behav_pred_neg <- as.vector(predict(fit_neg, newdata=test_neg, type="response"))
+      }
+      else{
+        behav_pred_neg <- NA
+      }
+      
+    }else if(edge == "combined"){
+      
+      if((NA %in% fit_combined) == FALSE){
+        behav_pred <- as.vector(predict(fit_combined, newdata=test_combined, type="response"))
+      }
+      else{
+        behav_pred <- NA
+      }
+    }
+    
+    if(edge=="separate"){
+      return(list(positive_edges=positive_edges,
+                  negative_edges=negative_edges,
+                  r_mat=r_mat, p_mat=p_mat,
+                  positive_model = fit_pos,
+                  negative_model = fit_neg,
+                  positive_predicted_behavior=behav_pred_pos,
+                  negative_predicted_behavior=behav_pred_neg))
+    }else if(edge=="combined"){
+      return(list(positive_edges=positive_edges,
+                  negative_edges=negative_edges,
+                  r_mat=r_mat, p_mat=p_mat,
+                  combined_model = fit_combined,
+                  predicted_behavior=behav_pred))
+    }
+    
+  }
+    
 
 }
 

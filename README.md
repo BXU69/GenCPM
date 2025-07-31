@@ -27,7 +27,8 @@ The `linear.GenCPM`, `logit.GenCPM`, `multinom.GenCPM`, and `cox.GenCPM` are fou
 ```
 linear.GenCPM(
     connectome, behavior, x=NULL, 
-    cv="leave-one-out", k = dim(connectome)[3], 
+    external.connectome = NULL, external.x = NULL,
+    cv="leave-one-out", k = dim(connectome)[3], correlation = "pearson", 
     thresh = .01, edge = "separate", seed = 1220
 )
 ```
@@ -35,7 +36,8 @@ linear.GenCPM(
 ```
 logit.GenCPM(
     connectome, behavior, x=NULL, 
-    cv="leave-one-out", k = dim(connectome)[3], 
+    external.connectome = NULL, external.x = NULL,
+    cv="leave-one-out", k = dim(connectome)[3], correlation = "pearson", 
     thresh = .01, edge = "separate", seed = 1220
 )
 ```
@@ -43,7 +45,8 @@ logit.GenCPM(
 ```
 multinom.GenCPM(
     connectome, behavior, x=NULL, 
-    cv="leave-one-out", k = dim(connectome)[3], 
+    external.connectome = NULL, external.x = NULL,
+    cv="leave-one-out", k = dim(connectome)[3], correlation = "pearson", 
     thresh = .01, edge = "separate", seed = 1220
 )
 ```
@@ -53,8 +56,11 @@ multinom.GenCPM(
 - `connectome`: an array indicating the connectivity between M edges and over N subjects. The dimension should be `M*M*N`.
 - `behavior`: a vector containing the behavior measure for all subjects.
 - `x`: a data frame containing the non-image variables in the model.
+- `external.connectome`: an external array indicating the connectivity for prediction.
+- `external.x`: an external data frame containing the non-image variables for prediction.
 - `cv`: a character indicating the method of cross-validation. The default method is `"leave-one-out"`.
 - `k`: a parameter used to set the number of folds for k-fold cross-validation.
+- `correlation`: the method for finding the correlation between edge and behavior. The default is "pearson". Alternative approaches are "spearman" and "kendall".
 - `thresh`: the value of the threshold for selecting significantly related edges. The default value is `.01`.
 - `edge`: a character indicating the model is fitted with either positive and negative edges respectively or combined edges together. The default is `"separate"`.
 - `seed`: the value used to set seed for random sampling in the process of cross-validation. The default value is `1220`.
@@ -67,15 +73,19 @@ The functions will return a list containing the following output:
 - `negative_edges`: all selected edges having a significantly negative relationship with behavior response.
 - `r_mat`: a list of matrices consisting of Pearson correlation coefficient between edges and behavior.
 - `p_mat`: a list of matrices consisting p-value from Pearson correlation between edges and behavior.
+- `positive_model`: Fitted model using positive edges. Only applicable when users input external.connectome.
+- `negative_model`: Fitted model using negative edges. Only applicable when users input external.connectome.
+- `combined_model`: Fitted model using both positive and negative edges. Only applicable when users input external.connectome.
 - `positive_predicted_behavior`: predicted behaviors from the model fitted using positive edges separately. Not applicable when the argument `edge = "combined"`.
 - `negative_predicted_behavior`: predicted behaviors from the model fitted using negative edges separately. Not applicable when the argument `edge = "combined"`.
 - `predicted_behavior`: predicted behaviors from the model fitted using all edges. Not applicable when the argument `edge = "separate"`.
-- `actual_behavior`: actual values of behavior response.
+- `actual_behavior`: Actual values of behavior response.
 
 
 ```
 cox.GenCPM(
     connectome, x=NULL, time, status,
+    external.connectome = NULL, external.x = NULL,
     cv="leave-one-out", k = dim(connectome)[3], 
     thresh = .01, edge="separate", seed = 1220
 )
@@ -87,6 +97,8 @@ cox.GenCPM(
 - `x`: a data frame containing the non-image variables in the model.
 - `time`: the follow-up time for all individuals.
 - `status`: the status indicator, normally 0=alive and 1=event.
+- `external.connectome`: an external array indicating the connectivity for prediction.
+- `external.x`: an external data frame containing the non-image variables for prediction.
 - `cv`: a character indicating the method of cross-validation. The default method is `"leave-one-out"`.
 - `k`: a parameter used to set the number of folds for k-fold cross-validation.
 - `thresh`: the value of the threshold for selecting significantly related edges. The default value is `.01`.
@@ -97,11 +109,14 @@ cox.GenCPM(
 
 - `positive_edges`: all selected edges having a significantly positive relationship with survival outcome in a marginal test.
 - `negative_edges`: all selected edges having a significantly negative relationship with survival outcome in a marginal test.
+- `positive_model`: Fitted model using positive edges. Only applicable when users input external.connectome.
+- `negative_model`: Fitted model using negative edges. Only applicable when users input external.connectome.
+- `combined_model`: Fitted model using both positive and negative edges. Only applicable when users input external.connectome.
 - `positive_predicted_linear_predictor`: predicted linear predictors from the Cox model fitted using positive edges separately. Not applicable when the argument `edge = "combined"`.
 - `negative_predicted_linear_predictor`: predicted linear predictors from the Cox model fitted using negative edges separately. Not applicable when the argument `edge = "combined"`.
 - `predicted_linear_predictor`: predicted linear predictors from the Cox model fitted using all edges. Not applicable when the argument `edge = "separate"`.
-- `actual_status`: actual values of status indicator.
-- `actual_time`: actual values of survival time.
+- `actual_time`: Actual values of survival time.
+- `actual_status`: Actual values of status indicator.
 
 
 ### 3. `.regularized.GenCPM`
@@ -112,8 +127,10 @@ The `linear.regularized.GenCPM`, `logit.regularized.GenCPM`, `multinom.regulariz
 ```
 linear.regularized.GenCPM(
     connectome, behavior, x, 
-    cv="leave-one-out", k=dim(connectome)[3], thresh=.01, 
-    edge="separate", type="lasso", lambda=NULL, alpha=NULL, seed=1220
+    external.connectome = NULL, external.x = NULL,
+    cv="leave-one-out", k=dim(connectome)[3], correlation = "pearson",
+    thresh=.01, edge="separate", type="lasso", 
+    lambda=NULL, alpha=NULL, seed=1220
 )
 ```
 
@@ -121,8 +138,10 @@ linear.regularized.GenCPM(
 ```
 logit.regularized.GenCPM(
     connectome, behavior, x, 
-    cv="leave-one-out", k=dim(connectome)[3], thresh=.01, 
-    edge="separate", type="lasso", lambda=NULL, alpha=NULL, seed=1220
+    external.connectome = NULL, external.x = NULL,
+    cv="leave-one-out", k=dim(connectome)[3], correlation = "pearson",
+    thresh=.01, edge="separate", type="lasso", 
+    lambda=NULL, alpha=NULL, seed=1220
 )
 ```
 
@@ -130,8 +149,10 @@ logit.regularized.GenCPM(
 ```
 multinom.regularized.GenCPM(
     connectome, behavior, x, 
-    cv="leave-one-out", k = dim(connectome)[3], thresh = .01, 
-    edge = "separate", type="lasso", lambda=NULL, alpha=NULL, seed = 1220
+    external.connectome = NULL, external.x = NULL,
+    cv="leave-one-out", k = dim(connectome)[3], correlation = "pearson",
+    thresh = .01, edge = "separate", type="lasso", 
+    lambda=NULL, alpha=NULL, seed = 1220
 )
 ```
 
@@ -139,8 +160,11 @@ multinom.regularized.GenCPM(
 - `connectome`: an array indicating the connectivity between M edges and over N subjects. The dimension should be `M*M*N`.
 - `behavior`: a vector containing the behavior measure for all subjects.
 - `x`: a data frame containing the non-image variables in the model.
+- `external.connectome`: an external array indicating the connectivity for prediction.
+- `external.x`: an external data frame containing the non-image variables for prediction.
 - `cv`: a character indicating the method of cross-validation. The default method is `"leave-one-out"`.
 - `k`: a parameter used to set the number of folds for k-fold cross-validation.
+- `correlation`: the method for finding the correlation between edge and behavior. The default is "pearson". Alternative approaches are "spearman" and "kendall".
 - `thresh`: the value of the threshold for selecting significantly related edges. The default value is `.01`.
 - `edge`: a character indicating the model is fitted with either positive and negative edges respectively or combined edges together. The default is `"separate"`.
 - `type`: type of penalty. The default is `"lasso"`.
@@ -152,6 +176,9 @@ multinom.regularized.GenCPM(
 
 - `positive_edges`: all selected edges having a significantly positive relationship with behavior response.                   
 - `negative_edges`: all selected edges having a significantly negative relationship with behavior response.
+- `positive_model`: Fitted model using positive edges. Only applicable when users input external.connectome.
+- `negative_model`: Fitted model using negative edges. Only applicable when users input external.connectome.
+- `combined_model`: Fitted model using both positive and negative edges. Only applicable when users input external.connectome.
 - `positive_predicted_behavior`: predicted behaviors from the model fitted using positive edges separately. Not applicable when the argument `edge = "combined"`.
 - `negative_predicted_behavior`: predicted behaviors from the model fitted using negative edges separately. Not applicable when the argument `edge = "combined"`.
 - `predicted_behavior`: predicted behaviors from the model fitted using all edges. Not applicable when the argument `edge = "separate"`.
@@ -175,8 +202,11 @@ cox.regularized.GenCPM(
 - `x`: a data frame containing the non-image variables in the model.
 - `time`: the follow-up time for all individuals.
 - `status`: the status indicator, normally 0=alive and 1=event.
+- `external.connectome`: an external array indicating the connectivity for prediction.
+- `external.x`: an external data frame containing the non-image variables for prediction.
 - `cv`: a character indicating the method of cross-validation. The default method is `"leave-one-out"`.
 - `k`: a parameter used to set the number of folds for k-fold cross-validation.
+- `correlation`: the method for finding the correlation between edge and behavior. The default is "pearson". Alternative approaches are "spearman" and "kendall".
 - `thresh`: the value of the threshold for selecting significantly related edges. The default value is `.01`.
 - `edge`: a character indicating the model is fitted with either positive and negative edges respectively or combined edges together. The default is `"separate"`.
 - `type`: type of penalty. The default is `"lasso"`.
@@ -189,6 +219,9 @@ cox.regularized.GenCPM(
 
 - `positive_edges`: all selected edges having a significantly positive relationship with survival outcome in a marginal test.
 - `negative_edges`: all selected edges having a significantly negative relationship with survival outcome in a marginal test.
+- `positive_model`: Fitted model using positive edges. Only applicable when users input external.connectome.
+- `negative_model`: Fitted model using negative edges. Only applicable when users input external.connectome.
+- `combined_model`: Fitted model using both positive and negative edges. Only applicable when users input external.connectome.
 - `positive_predicted_linear_predictor`: predicted linear predictor from the model fitted using positive edges separately. Not applicable when the argument `edge = "combined"`.
 - `negative_predicted_linear_predictor`: predicted linear predictor from the model fitted using negative edges separately. Not applicable when the argument `edge = "combined"`.
 - `predicted_linear_predictor`: predicted linear predictor from the model fitted using all edges. Not applicable when the argument `edge = "separate"`.

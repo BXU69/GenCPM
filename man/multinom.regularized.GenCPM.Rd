@@ -2,14 +2,17 @@
 % Please edit documentation in R/multinom.regularized.GenCPM.R
 \name{multinom.regularized.GenCPM}
 \alias{multinom.regularized.GenCPM}
-\title{Penalized Version of Multinomial Model Prediction}
+\title{Penalized Version of Multinomial Logistic Model Prediction}
 \usage{
 multinom.regularized.GenCPM(
   connectome,
   behavior,
   x,
+  external.connectome = NULL,
+  external.x = NULL,
   cv = "leave-one-out",
   k = dim(connectome)[3],
+  correlation = "pearson",
   thresh = 0.01,
   edge = "separate",
   type = "lasso",
@@ -19,15 +22,21 @@ multinom.regularized.GenCPM(
 )
 }
 \arguments{
-\item{connectome}{an array indicating the connectivity between M edges and over N subjects. The dimension should be \code{M*M*N}.}
+\item{connectome}{an array indicating the connectivity between M edges and over N subjects for model fitting. The dimension should be \code{M*M*N}.}
 
-\item{behavior}{a vector containing the behavior measure for all subjects.}
+\item{behavior}{a vector containing the behavior measure for all subjects for model fitting.}
 
-\item{x}{a data frame containing the non-image variables in the model.}
+\item{x}{a data frame containing the non-image variables for model fitting.}
+
+\item{external.connectome}{an external array indicating the connectivity for prediction.}
+
+\item{external.x}{an external data frame containing the non-image variables for prediction.}
 
 \item{cv}{a character indicating the method of cross-validation. The default method is "leave-one-out" cross-validation.}
 
 \item{k}{a parameter used to set the number of folds for k-fold cross-validation.}
+
+\item{correlation}{the method for finding the correlation between edge and behavior. The default is "pearson". Alternative approaches are "spearman" and "kendall".}
 
 \item{thresh}{the value of the threshold for selecting significantly related edges. The default value is .01.}
 
@@ -45,5 +54,5 @@ multinom.regularized.GenCPM(
 A list contains positive edges, negative edges, predicted behavior, actual behavior, and the optimal lambda.
 }
 \description{
-Penalized Version of Multinomial Model Prediction
+Penalized Version of Multinomial Logistic Model Prediction
 }

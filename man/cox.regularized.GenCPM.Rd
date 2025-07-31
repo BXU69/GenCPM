@@ -9,6 +9,8 @@ cox.regularized.GenCPM(
   x = NULL,
   time,
   status,
+  external.connectome = NULL,
+  external.x = NULL,
   cv = "leave-one-out",
   k = dim(connectome)[3],
   thresh = 0.01,
@@ -20,13 +22,17 @@ cox.regularized.GenCPM(
 )
 }
 \arguments{
-\item{connectome}{an array indicating the connectivity between M1 edges and over N subjects. The dimension should be \code{M1*M1*N}.}
+\item{connectome}{an array indicating the connectivity between M1 edges and over N subjects for model fitting. The dimension should be \code{M1*M1*N}.}
 
-\item{x}{non-image covariates matrix, of \code{n (obs)* p (vars)}.}
+\item{x}{non-image covariates matrix, of \code{n (obs)* p (vars)} for model fitting.}
 
-\item{time}{the follow-up time for all individuals.}
+\item{time}{the follow-up time for all individuals for model fitting.}
 
-\item{status}{the status indicator, normally 0=alive and 1=event.}
+\item{status}{the status indicator for model fitting, normally 0=alive and 1=event.}
+
+\item{external.connectome}{an external array indicating the connectivity for prediction.}
+
+\item{external.x}{an external data frame containing the non-image variables for prediction.}
 
 \item{cv}{a character indicating the method of cross-validation. The default method is "leave-one-out" cross-validation.}
 

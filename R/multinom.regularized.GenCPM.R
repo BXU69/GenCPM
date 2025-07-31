@@ -1,12 +1,15 @@
-#' Penalized Version of Multinomial Model Prediction
+#' Penalized Version of Multinomial Logistic Model Prediction
 #'
 #' @import psych
 #' @import glmnet
-#' @param connectome an array indicating the connectivity between M edges and over N subjects. The dimension should be `M*M*N`.
-#' @param behavior a vector containing the behavior measure for all subjects.
-#' @param x a data frame containing the non-image variables in the model.
+#' @param connectome an array indicating the connectivity between M edges and over N subjects for model fitting. The dimension should be `M*M*N`.
+#' @param behavior a vector containing the behavior measure for all subjects for model fitting.
+#' @param x a data frame containing the non-image variables for model fitting.
+#' @param external.connectome an external array indicating the connectivity for prediction.
+#' @param external.x an external data frame containing the non-image variables for prediction.
 #' @param cv a character indicating the method of cross-validation. The default method is "leave-one-out" cross-validation.
 #' @param k a parameter used to set the number of folds for k-fold cross-validation.
+#' @param correlation the method for finding the correlation between edge and behavior. The default is "pearson". Alternative approaches are "spearman" and "kendall".
 #' @param thresh the value of the threshold for selecting significantly related edges. The default value is .01.
 #' @param edge a character indicating the model is fitted with either positive and negative edges respectively or combined edges together. The default is "separate".
 #' @param type type of penalty. The default is lasso.
@@ -17,10 +20,11 @@
 #' @export
 
 multinom.regularized.GenCPM <- function(connectome, behavior, x,
+                                        external.connectome = NULL, external.x = NULL,
                                      cv="leave-one-out", k = dim(connectome)[3],
-                                     thresh = .01, edge = "separate",
-                                     type="lasso", lambda=NULL, alpha=NULL,
-                                     seed = 1220){
+                                     correlation = "pearson", thresh = .01,
+                                     edge = "separate", type="lasso",
+                                     lambda=NULL, alpha=NULL, seed = 1220){
 
   if(length(k)>1){
     stop("invalid cross validation index")
@@ -55,8 +59,9 @@ multinom.regularized.GenCPM <- function(connectome, behavior, x,
     edges[,i] <- t(connectome[,,i])[lower.tri(connectome[,,i],diag=FALSE)]
   }
 
-  # main part
-
+  if(missing(external.connectome)){
+    stop("Connectome are required for prediction.")
+  }else if(missing(external.connectome) & missing(external.x)){
   # leave-one-out
 
   if((cv == "leave-one-out" && k == dim(connectome)[3]) | (cv == "k-fold" && k == dim(connectome)[3])){
@@ -107,7 +112,8 @@ multinom.regularized.GenCPM <- function(connectome, behavior, x,
       # univariate edge selection
       # correlate all edges with behavior
 
-      corr <- corr.test(x = t(train_mats), y = train_behav, adjust = "none", ci=F)
+      corr <- corr.test(x = t(train_mats), y = train_behav, method = correlation,
+                        adjust = "none", ci=F)
 
       edge_r <- corr$r
       edge_p <- corr$p
@@ -385,7 +391,8 @@ multinom.regularized.GenCPM <- function(connectome, behavior, x,
         # univariate edge selection
         # correlate all edges with behavior
 
-        corr <- corr.test(x = t(train_mats), y = train_behav, adjust = "none", ci=F)
+        corr <- corr.test(x = t(train_mats), y = train_behav, method = correlation,
+                          adjust = "none", ci=F)
 
         edge_r <- corr$r
         edge_p <- corr$p
@@ -575,6 +582,227 @@ multinom.regularized.GenCPM <- function(connectome, behavior, x,
   }
 
 
+  }else{
+    
+    # divide into TRAIN set and TEST set
+    
+    train_mats <- edges
+    train_behav <- behavior
+    
+    if(missing(x)){
+      train_x <- NULL
+    }else {
+      train_x <- x
+    }
+    
+    t <- dim(external.connectome)[3]
+    
+    external_edges <- matrix(0, nrow=M,ncol=t)
+    
+    for (i in 1:t){
+      external_edges[,i] <- t(connectome[,,i])[lower.tri(connectome[,,i],diag=FALSE)]
+    }
+    
+    test_mats <- external_edges
+    
+    if(missing(x)){
+      test_x <- NULL
+    }else {
+      test_x <- external.x
+    }
+    
+    # univariate edge selection
+    
+    corr <- corr.test(x = t(train_mats), y = train_behav, method = correlation,
+                      adjust = "none", ci=F)
+    
+    edge_r <- as.vector(corr$r)
+    edge_p <- as.vector(corr$p)
+    
+    # set threshold and define masks
+    
+    edge_index <- which(edge_p <= thresh)
+    
+    edge_index_pos <- which(edge_r > 0 & edge_p <= thresh)
+    edge_index_neg <- which(edge_r < 0 & edge_p <= thresh)
+    
+    train_covars <- data.matrix(cbind(edge=t(train_mats[edge_index,]), x=train_x))
+    test_covars <- data.matrix(cbind(edge=t(test_mats[edge_index]), x=test_x))
+    
+    train_covars_pos <- data.matrix(cbind(edge=t(train_mats[edge_index_pos,]), x=train_x))
+    test_covars_pos <- data.matrix(cbind(edge=t(test_mats[edge_index_pos]), x=test_x))
+    
+    train_covars_neg <- data.matrix(cbind(edge=t(train_mats[edge_index_neg,]), x=train_x))
+    test_covars_neg <- data.matrix(cbind(edge=t(test_mats[edge_index_neg]), x=test_x))
+    
+    nedge <- length(edge_index)
+    nedge_pos <- length(edge_index_pos)
+    nedge_neg <- length(edge_index_neg)
+    
+    if(edge=="separate"){
+      
+      if(missing(lambda) | length(lambda) < 1){
+        
+        fit_lambda_pos <- cv.glmnet(train_covars_pos, train_behav,
+                                    family = "multinomial",
+                                    alpha=type_alpha, type.measure="class",
+                                    penalty.factor=c(rep(1, nedge_pos),rep(0, ncol(train_covars_pos)-nedge_pos)))
+        opt_lambda_pos <- fit_lambda_pos$lambda.1se
+        
+        fit_lambda_neg <- cv.glmnet(train_covars_neg, train_behav,
+                                    family = "multinomial",
+                                    alpha=type_alpha, type.measure="class",
+                                    penalty.factor=c(rep(1, nedge_neg),rep(0, ncol(train_covars_neg)-nedge_neg)))
+        opt_lambda_neg <- fit_lambda_neg$lambda.1se
+        
+      }else if(length(lambda) > 1){
+        
+        fit_lambda_pos <- cv.glmnet(train_covars_pos, train_behav,
+                                    family = "multinomial",
+                                    lambda = lambda, alpha=type_alpha,
+                                    type.measure="class",
+                                    penalty.factor=c(rep(1, nedge_pos),rep(0, ncol(train_covars_pos)-nedge_pos)))
+        opt_lambda_pos <- fit_lambda_pos$lambda.1se
+        
+        fit_lambda_neg <- cv.glmnet(train_covars_neg, train_behav,
+                                    family = "multinomial",
+                                    lambda = lambda, alpha=type_alpha,
+                                    type.measure="class",
+                                    penalty.factor=c(rep(1, nedge_neg),rep(0, ncol(train_covars_neg)-nedge_neg)))
+        opt_lambda_neg <- fit_lambda_neg$lambda.1se
+        
+      }else{
+        
+        opt_lambda_pos <- lambda
+        opt_lambda_neg <- lambda
+        
+      }
+      
+      lambda_total_pos <- opt_lambda_pos
+      lambda_total_neg <- opt_lambda_neg
+      
+      # train model with the optimal lambda
+      
+      fit_pos <- glmnet(train_covars_pos, train_behav,
+                        family = "multinomial",
+                        lambda = opt_lambda_pos, alpha=type_alpha,
+                        penalty.factor=c(rep(1, nedge_pos),rep(0, ncol(train_covars_pos)-nedge_pos)))
+      fit_neg <- glmnet(train_covars_neg, train_behav,
+                        family = "multinomial",
+                        lambda = opt_lambda_neg, alpha=type_alpha,
+                        penalty.factor=c(rep(1, nedge_neg),rep(0, ncol(train_covars_neg)-nedge_neg)))
+      
+      # edge selection by glmnet
+      
+      coef_pos <- matrix(NA,nrow=nedge_pos,ncol=c)
+      coef_neg <- matrix(NA,nrow=nedge_neg,ncol=c)
+      
+      index0_pos <- vector(mode="list",length=c)
+      index0_neg <- vector(mode="list",length=c)
+      
+      for (p in 1:c){
+        coef_pos[,p] <- data.matrix(coef(fit_pos)[[p]])[c(2:(nedge_pos+1))]
+        index0_pos[[p]] <- which(coef_pos[,p]!=0)
+        coef_neg[,p] <- data.matrix(coef(fit_neg)[[p]])[c(2:(nedge_neg+1))]
+        index0_neg[[p]] <- which(coef_neg[,p]!=0)
+      }
+      
+      index1_pos <- sort(unique(unlist(index0_pos)))
+      index1_neg <- sort(unique(unlist(index0_neg)))
+      
+      selected_edges_pos <- edge_index_pos[index1_pos]
+      selected_edges_neg <- edge_index_neg[index1_neg]
+      
+      # predict TEST subs with the best lambda param
+      
+      behav_pred_pos <- predict(fit_pos, newx=test_covars_pos, type = "class")
+      behav_pred_neg <- predict(fit_neg, newx=test_covars_neg, type = "class")
+      
+      
+    }else if(edge=="combined"){
+      
+      if(missing(lambda) | length(lambda) < 1){
+        
+        fit_lambda <- cv.glmnet(train_covars, train_behav,
+                                family = "multinomial",
+                                alpha=type_alpha, type.measure="class",
+                                penalty.factor=c(rep(1, nedge),rep(0, ncol(train_covars)-nedge)))
+        opt_lambda <- fit_lambda$lambda.1se
+        
+      }else if(length(lambda) > 1){
+        
+        fit_lambda <- cv.glmnet(train_covars, train_behav,
+                                family = "multinomial",
+                                lambda = lambda, alpha=type_alpha,
+                                type.measure="class",
+                                penalty.factor=c(rep(1, nedge),rep(0, ncol(train_covars)-nedge)))
+        opt_lambda <- fit_lambda$lambda.1se
+        
+      }else{
+        
+        opt_lambda <- lambda
+        
+      }
+      
+      lambda_total <- opt_lambda
+      
+      # train model with the optimal lambda
+      
+      fit <- glmnet(train_covars, train_behav, 
+                    family = "multinomial", lambda = opt_lambda,
+                    alpha=type_alpha,
+                    penalty.factor=c(rep(1, nedge),rep(0, ncol(train_covars)-nedge)))
+      
+      # edge selection by glmnet
+      
+      coef <- matrix(NA,nrow=nedge,ncol=c)
+      index0_pos <- vector(mode="list",length=c)
+      index0_neg <- vector(mode="list",length=c)
+      
+      for (p in 1:c){
+        coef[,p] <- data.matrix(coef(fit)[[p]])[c(2:(nedge+1))]
+        index0_pos[[p]] <- which(coef[,p]>0)
+        index0_neg[[p]] <- which(coef[,p]<0)
+      }
+      
+      index1_pos <- sort(unique(unlist(index0_pos)))
+      index1_neg <- sort(unique(unlist(index0_neg)))
+      
+      selected_edges_pos <- edge_index[index1_pos]
+      selected_edges_neg <- edge_index[index1_neg]
+      
+      
+      # predict TEST subs with the best lambda param
+      
+      behav_pred <- predict(fit, newx=test_covars, type = "class")
+      
+    }
+    
+    
+    if(edge=="separate"){
+      
+      return(list(positive_edges=selected_edges_pos,
+                  negative_edges=selected_edges_neg,
+                  positive_model=fit_pos,
+                  negative_model=fit_neg,
+                  positive_predicted_behavior=behav_pred_pos,
+                  negative_predicted_behavior=behav_pred_neg,
+                  positive_lambda=lambda_total_pos,
+                  negative_lambda=lambda_total_neg))
+      
+    }else if(edge=="combined"){
+      
+      return(list(positive_edges=selected_edges_pos,
+                  negative_edges=selected_edges_neg,
+                  combined_model=fit,
+                  predicted_behavior=behav_pred,
+                  lambda=lambda_total))
+      
+    }
+    
+  }
+  
+  
 }
 
 

@@ -9,6 +9,7 @@ train.GenCPM(
   train_behav = NULL,
   train_x = NULL,
   fit = "linear",
+  correlation = "pearson",
   thresh = 0.01,
   edge = "separate"
 )
@@ -21,6 +22,8 @@ train.GenCPM(
 \item{train_x}{a data frame containing the non-image variables in the model.}
 
 \item{fit}{the method to be used in fitting the model. The default method is "linear".}
+
+\item{correlation}{the method for finding the correlation between edge and behavior. The default is "pearson". Alternative approaches are "spearman" and "kendall".}
 
 \item{thresh}{the value of the threshold for selecting significantly related edges. The default value is .01.}
 
