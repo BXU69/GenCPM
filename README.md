@@ -1,8 +1,13 @@
 # GenCPM
+***A Toolbox for Generalized Connectome-based Predictive Modeling***
 
-## Framework
+### **Abstract** 
+Understanding brain–behavior relationships and predicting cognitive and clinical outcomes from neuromarkers are central tasks in neuroscience. Connectome-based Predictive Modeling (CPM) has been widely adopted to predict behavioral traits from brain connectivity data; however, existing implementations are largely restricted to continuous outcomes, often overlook essential non-imaging covariates, and are difficult to apply in clinical or disease cohort settings. To address these limitations, we present GenCPM, a generalized CPM framework implemented in open-source R software. GenCPM extends traditional CPM by supporting binary, categorical, and time-to-event outcomes and allows the integration of covariates such as demographic and genetic information, thereby improving predictive accuracy and interpretability. To handle high-dimensional data, GenCPM incorporates marginal screening and regularized regression techniques, including LASSO, ridge, and elastic net, for efficient selection of informative brain connections. We demonstrate the utility of GenCPM through analyses of the Anti-Amyloid Treatment in Asymptomatic Alzheimer’s Disease (A4) Study and the Alzheimer’s Disease Neuroimaging Initiative (ADNI), showing enhanced predictive performance and improved signal attribution compared to standard methods. GenCPM offers a flexible, scalable, and interpretable solution for predictive modeling in brain connectivity research, supporting broader applications in cognitive and clinical neuroscience.
+
+## Overview of the GenCPM toolbox
 
 <img src="fig/framework.png"/>
+Fig. 1 Each subject provides a connectivity matrix and an outcome variable (e.g., a behavior or clinical measure). (a). In the original GenCPM framework, marginal screening is applied to select the top $K$ significant edges based on a predefined threshold $p$. The selected edges are separated into positively and negatively correlated sets, and summary measures, computed as sums of the average connectivity strength within each set, are derived for each subject. These connectivity-derived predictors are then combined with optional non-imaging covariates and entered into downstream models, including linear, logistic, multinomial, and CoxPH regression. (b). In the penalized GenCPM variant, the full set of selected edge features is retained without aggregation, allowing the model to capture fine-grained individual edge-level contributions. The resulting feature matrix, combined with non-imaging covariates, is then input into regularized regression models such as LASSO, ridge, and elastic net, where penalization is applied only to edge features, for joint modeling and feature selection while preserving the contribution of non-imaging covariates.
 
 ## Installation
 
@@ -24,7 +29,7 @@ The `train.GenCPM` is an intermediate function for training models that will be 
 
 The `linear.GenCPM`, `logit.GenCPM`, `multinom.GenCPM`, and `cox.GenCPM` are four main functions to fit models and output predictions for respectively continuous, binary, categorical, and survival responses using Connectome-based Predicted Modeling.
 
-```
+```R
 linear.GenCPM(
     connectome, behavior, x=NULL, 
     external.connectome = NULL, external.x = NULL,
@@ -33,7 +38,7 @@ linear.GenCPM(
 )
 ```
 
-```
+```R
 logit.GenCPM(
     connectome, behavior, x=NULL, 
     external.connectome = NULL, external.x = NULL,
@@ -42,7 +47,7 @@ logit.GenCPM(
 )
 ```
 
-```
+```R
 multinom.GenCPM(
     connectome, behavior, x=NULL, 
     external.connectome = NULL, external.x = NULL,
@@ -82,7 +87,7 @@ The functions will return a list containing the following output:
 - `actual_behavior`: Actual values of behavior response.
 
 
-```
+```R
 cox.GenCPM(
     connectome, x=NULL, time, status,
     external.connectome = NULL, external.x = NULL,
