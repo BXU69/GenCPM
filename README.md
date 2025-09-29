@@ -343,6 +343,7 @@ heatmap.GenCPM(lm.fit, foldThreshold = 0.8)
 ## Citation
 
 Please cite the paper when you use the `GenCPM` package:
+
 [Xu B, Ding S, Xu W, Fredericks C and Zhao Y (2025) GenCPM: a toolbox for generalized connectome-based predictive modeling. Front. Neurosci. 19:1627497. doi: 10.3389/fnins.2025.1627497](https://www.frontiersin.org/journals/neuroscience/articles/10.3389/fnins.2025.1627497/full)
 
 
